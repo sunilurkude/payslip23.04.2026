@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teachers Payslip Portal</title>
+  <!-- SheetJS (xlsx) library for Excel parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    /* Custom scrollbar for a more polished look */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+    @media print {
+      body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        margin: 0 !important;
+        padding: 0 !important;
+        background-color: white !important;
+      }
+
+      /* Hide elements not part of the printable content */
+      body > *:not(#root):not(.print-popup-content):not(.print-report-content) { /* Allow print-popup-content for direct printing */
+        display: none !important;
+      }
+      #root > div > header, /* App.tsx header */
+      #root > div > footer { /* App.tsx footer */
+        display: none !important;
+      }
+      .no-print-in-popup { display: none !important; }
+
+
+      /* Reset main content area from App.tsx for printing */
+      #root > div > main {
+        display: block !important;
+        width: auto !important;
+        max-width: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: white !important; /* Changed from transparent for safety */
+        box-shadow: none !important;
+        border: none !important;
+      }
+      
+      /* General class to hide elements during print */
+      .no-print {
+        display: none !important;
+      }
+
+      /* Base styling for the payslip itself, though PayslipDisplay.tsx has more specific styles */
+      .printable-payslip {
+        display: block !important; /* Ensure it's visible */
+        margin: 0 !important;
+        padding: 0 !important; /* Let @page margins handle spacing */
+        border: none !important;
+        box-shadow: none !important;
+        width: 100% !important; /* Should fill the area defined by @page */
+        background-color: white !important;
+        color: black !important;
+      }
+      /* Ensure elements within the payslip are also styled for print if not handled by component styles */
+      .printable-payslip div, 
+      .printable-payslip span, 
+      .printable-payslip p, 
+      .printable-payslip th, 
+      .printable-payslip td,
+      .printable-payslip h1,
+      .printable-payslip h2,
+      .printable-payslip h3,
+      .printable-payslip h4,
+      .printable-payslip h5,
+      .printable-payslip h6,
+      .printable-payslip hr {
+        background-color: white !important;
+        color: black !important;
+        border-color: #666 !important; /* Darker for print if borders are visible */
+      }
+
+      /* Styles for Yearly Statement Table when printed directly from a popup */
+      .print-popup-content .statement-container {
+        width: 100%;
+        margin: 0 auto;
+      }
+      .print-popup-content .statement-header {
+        text-align: center;
+        margin-bottom: 10px;
+      }
+      .print-popup-content .statement-header h3 {
+        margin: 0; font-size: 14pt;
+      }
+      .print-popup-content .statement-header p {
+        margin: 2px 0; font-size: 10pt;
+      }
+       .print-popup-content .info-grid {
+        display: grid;
+        grid-template-columns: auto 1fr auto 1fr; /* Adjusted for 4 items per row ideally */
+        gap: 3px 10px; /* Reduced gap */
+        margin-bottom: 10px;
+        font-size: 9pt; /* Slightly smaller */
+      }
+      .print-popup-content .info-grid div {
+        white-space: nowrap;
+      }
+      .print-popup-content .info-grid span:first-child {
+        font-weight: bold;
+        padding-right: 5px;
+      }
+      .print-popup-content table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 8pt; /* Smaller font for table */
+        margin-top: 5px;
+      }
+      .print-popup-content th, .print-popup-content td {
+        border: 1px solid #888; /* Darker border for print */
+        padding: 3px; /* Reduced padding */
+        text-align: left;
+        color: black !important; /* Ensure black text */
+        background-color: white !important; /* Ensure white background */
+      }
+      .print-popup-content th {
+        background-color: #e0e0e0 !important; /* Lighter grey for header */
+        font-weight: bold;
+      }
+      .print-popup-content td.amount, .print-popup-content th.amount {
+        text-align: right;
+      }
+      .print-popup-content .total-row td {
+        font-weight: bold;
+        background-color: #efefef !important; /* Slightly different grey for total */
+      }
+      .print-popup-content table { page-break-inside: auto; }
+      .print-popup-content tr { page-break-inside: avoid; page-break-after: auto; }
+      .print-popup-content thead { display: table-header-group; }
+      .print-popup-content tfoot { display: table-footer-group; }
+      .print-popup-content .statement-table-wrapper { overflow: visible !important; } /* Disable screen scroll for print */
+    }
+
+    /* Styles for Admin Download Reports */
+    .print-report-content { /* This class will wrap the content sent to the print window */
+      /* Styles applied inside the print window via JS */
+    }
+    @media print {
+      .print-report-A4-landscape {
+        @page { size: A4 landscape; margin: 0.5in; }
+      }
+      .print-report-legal-landscape {
+        @page { size: legal landscape; margin: 0.5in; }
+      }
+
+      .print-report-content body { font-family: Arial, sans-serif; margin:0; padding:0; }
+      .print-report-content h2 { text-align: center; font-size: 14pt; margin-bottom: 10px; }
+      
+      /* Specific table font sizes for different report orientations */
+      .print-report-A4-landscape .print-report-content table {
+        border-collapse: collapse; width: 100%; font-size: 8pt; /* Reduced for A4 Landscape */
+      }
+      .print-report-legal-landscape .print-report-content table {
+        border-collapse: collapse; width: 100%; font-size: 7pt; /* Reduced for Legal Landscape */
+      }
+
+      .print-report-content th, .print-report-content td {
+        border: 1px solid black;
+        padding: 3px;
+        text-align: center !important; /* Universal center alignment */
+        vertical-align: middle !important; /* Vertical centering */
+        word-break: break-word; /* Allow content to wrap within cells */
+      }
+      .print-report-content th { background-color: #f2f2f2; font-weight: bold; }
+      .print-report-content .school-group-wrapper { page-break-inside: avoid; margin-top:10px; } /* for offline paybill print grouping */
+      .print-report-content .subtotal-row td { font-weight: bold; background-color: #e9e9e9 !important; }
+      .print-report-content .grandtotal-row td { font-weight: bold; background-color: #dcdcdc !important; border-top: 2px solid black;}
+    }
+  </style>
+</head>
+<body class="bg-slate-100">
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

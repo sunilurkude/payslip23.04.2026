@@ -1,0 +1,6 @@
+{
+  "name": "Payslipportal",
+  "description": "A web application for managing teacher payslips, with dedicated portals for Managers, Admins, and Teachers.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
